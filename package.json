@@ -16,7 +16,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",
     "cors": "^2.8.5",
-    "express": "^4.18.2",
+    "express": "^4.22.1",
     "ping": "^0.4.4",
     "socket.io": "^4.8.3"
   },
