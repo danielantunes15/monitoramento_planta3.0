@@ -1,5 +1,3 @@
-// Arquivo: public/js/modules/scene_setup.js
-
 window.initThreeJS = function(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return null;
@@ -27,11 +25,14 @@ window.initThreeJS = function(containerId) {
     labelRenderer.domElement.style.pointerEvents = 'none';
     container.appendChild(labelRenderer.domElement);
 
-    // Controles
+    // Controles (Orbit)
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.maxPolarAngle = Math.PI / 2 - 0.1;
+    
+    // IMPORTANTE: Expõe controle global para o Editor poder pausá-lo
+    window.controls = controls;
 
     // Luzes
     const ambient = new THREE.AmbientLight(0xffffff, 0.8);

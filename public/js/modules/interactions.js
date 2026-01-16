@@ -1,11 +1,25 @@
-// Arquivo: public/js/modules/interactions.js
-
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let INTERSECTED = null;
+let transformControl = null; 
+let isEditMode = false;
 
-window.setupInteractions = function(camera, rendererDom, interactables, networkDataRef) {
+window.setupInteractions = function(camera, rendererDom, interactables, networkDataRef, scene) {
     
+    // 1. Inicializa o TransformControls (Ferramenta de Arrastar)
+    if(typeof THREE.TransformControls !== 'undefined') {
+        transformControl = new THREE.TransformControls(camera, rendererDom);
+        
+        // Quando estiver arrastando, desativa o giro da câmera (OrbitControls)
+        transformControl.addEventListener('dragging-changed', function (event) {
+            if(window.controls) window.controls.enabled = !event.value; 
+        });
+        
+        scene.add(transformControl);
+    } else {
+        console.warn("TransformControls não carregado. Verifique o index.html.");
+    }
+
     // Mouse Move
     document.addEventListener('mousemove', (e) => {
         const r = rendererDom.getBoundingClientRect();
@@ -14,20 +28,31 @@ window.setupInteractions = function(camera, rendererDom, interactables, networkD
     }, false);
 
     // Click
-    rendererDom.addEventListener('pointerdown', () => {
-        if(INTERSECTED) {
-            showSectorInfo(INTERSECTED, networkDataRef);
+    rendererDom.addEventListener('pointerdown', (event) => {
+        // Se estiver em modo edição, foca no objeto para arrastar
+        if(isEditMode) {
+            if(INTERSECTED && INTERSECTED.userData.type === 'building') {
+                if(transformControl) transformControl.attach(INTERSECTED);
+            } else if (!INTERSECTED && transformControl) {
+                transformControl.detach(); // Clicou fora, solta
+            }
+        }
+        // Se estiver em modo normal, mostra informações (Popup)
+        else {
+            if(INTERSECTED) showSectorInfo(INTERSECTED, networkDataRef);
         }
     }, false);
 
-    // Search Input
+    // Tecla ESC para soltar objeto
+    window.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && transformControl) transformControl.detach();
+    });
+
+    // Busca (Enter)
     const searchInput = document.getElementById('searchInput');
     if(searchInput) {
         searchInput.addEventListener('keydown', (e) => {
             if(e.key === 'Enter'){
-                // Dispara evento customizado para o main.js ouvir (ou busca direta se tiver acesso aos hosts)
-                // Por simplicidade, vamos assumir que o main cuida da câmera, 
-                // ou podemos adicionar a lógica de busca aqui se passarmos os dados de setores.
                 const term = e.target.value.toUpperCase();
                 window.dispatchEvent(new CustomEvent('search-sector', { detail: term }));
             }
@@ -35,8 +60,26 @@ window.setupInteractions = function(camera, rendererDom, interactables, networkD
     }
 };
 
+// Função para Alternar Modo (Chamada pelo main.js)
+window.setEditMode = function(active) {
+    isEditMode = active;
+    if(!active && transformControl) transformControl.detach();
+    
+    // Visual: Borda amarela na tela
+    const body = document.body;
+    body.style.border = active ? "4px solid #facc15" : "none";
+    body.style.boxSizing = "border-box";
+
+    if(active) {
+        alert("MODO EDITOR ATIVADO:\n- Clique num prédio para selecionar.\n- Use as setas para mover.\n- Clique em 'Salvar Layout' quando terminar.");
+    }
+};
+
 // Chamado no loop de animação
 window.checkIntersections = function(camera, interactables, statusMap) {
+    // Se estiver arrastando, não muda o foco
+    if(transformControl && transformControl.dragging) return;
+
     raycaster.setFromCamera(mouse, camera);
     const hits = raycaster.intersectObjects(interactables);
     
@@ -49,10 +92,18 @@ window.checkIntersections = function(camera, interactables, statusMap) {
             
             // Cor de Hover
             if(INTERSECTED.userData.type === 'building') {
-                 const s = statusMap[INTERSECTED.userData.id]?.status;
-                 if(s === 'CRITICAL') INTERSECTED.material.color.setHex(0xff4444); // Hover Red
-                 else if(s === 'WARNING') INTERSECTED.material.color.setHex(0xffcc00); // Hover Orange
-                 else INTERSECTED.material.color.setHex(0x38bdf8); // Hover Blue
+                 // Em modo edição fica Amarelo, normal fica Azul
+                 const hoverColor = isEditMode ? 0xffff00 : 0x38bdf8;
+                 
+                 // Em modo normal, respeita alertas de erro
+                 if(!isEditMode) {
+                     const s = statusMap[INTERSECTED.userData.id]?.status;
+                     if(s === 'CRITICAL') INTERSECTED.material.color.setHex(0xff4444);
+                     else if(s === 'WARNING') INTERSECTED.material.color.setHex(0xffcc00);
+                     else INTERSECTED.material.color.setHex(hoverColor);
+                 } else {
+                     INTERSECTED.material.color.setHex(hoverColor);
+                 }
             }
             document.body.style.cursor = 'pointer';
         }
@@ -68,20 +119,28 @@ function updateObjectColor(mesh, statusMap) {
         const s = statusMap[mesh.userData.id]?.status;
         if(s === 'CRITICAL') mesh.material.color.setHex(0xff0000);
         else if(s === 'WARNING') mesh.material.color.setHex(0xffaa00);
-        else mesh.material.color.setHex(0x1e293b); // Normal
+        else mesh.material.color.setHex(0x1e293b); // Cor Padrão
     }
 }
 
 function showSectorInfo(mesh, networkData) {
-    document.getElementById('sector-info').classList.remove('hidden');
+    const infoPanel = document.getElementById('sector-info');
+    infoPanel.classList.remove('hidden');
     document.getElementById('sector-name').innerText = mesh.userData.name;
     
-    const net = networkData.find(n => n.id === mesh.userData.id);
+    // Busca dados atualizados da rede
+    // Nota: networkData é uma referência, mas arrays mudam. 
+    // Idealmente buscaríamos do appState global ou uma função getter.
+    // Aqui usamos o que foi passado, mas a atualização visual principal ocorre no main.js
+    
     const msg = document.getElementById('sector-status-msg');
     
+    // Envia evento para main.js popular os dados frescos (opcional, ou faz direto aqui)
+    // Para simplificar, vamos assumir que o main.js atualiza o array networkDataRef
+    const net = networkDataRef.find(n => n.id === mesh.userData.id);
+
     if(net) {
-        document.getElementById('sector-ip').innerText = "Switch IP: " + (net.ip || 'Não Configurado');
-        // ... (resto da lógica de HTML do popup - igual original) ...
+        document.getElementById('sector-ip').innerText = "IP: " + (net.ip || 'Não Configurado');
         let detailsHTML = net.status === 'CRITICAL' 
             ? `<div style="margin-bottom:8px; color:#fb7185; font-weight:bold;">❌ Switch: OFFLINE</div>`
             : `<div style="margin-bottom:8px; color:#2dd4bf; font-weight:bold;">✅ Switch: ONLINE</div>`;
