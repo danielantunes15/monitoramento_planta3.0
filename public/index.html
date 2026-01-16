@@ -6,6 +6,7 @@
     <title>Bahia Etanol | Monitoramento Inteligente</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="css/style.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -15,52 +16,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
-    <style>
-        /* Estilos dos Painéis Laterais */
-        .editor-sidebar {
-            position: fixed; right: -400px; top: 0; width: 350px; height: 100%;
-            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
-            border-left: 1px solid rgba(255,255,255,0.1);
-            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 1000; padding: 20px; display: flex; flex-direction: column;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-        }
-        .editor-sidebar.open { right: 0; }
-        .editor-sidebar.wide { width: 600px; right: -650px; }
-        .editor-sidebar.wide.open { right: 0; }
-
-        .sidebar-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .sidebar-header h2 { font-size: 18px; color: #f8fafc; font-weight: 600; margin: 0; }
-        .close-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; transition: 0.2s; }
-        .close-btn:hover { color: #fff; transform: rotate(90deg); }
-
-        .editor-body { flex: 1; overflow-y: auto; }
-        
-        /* Botões de Ação no Modo Editor */
-        .edit-controls { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-cancel { background: #ef4444 !important; color: white !important; border: none !important; }
-        .btn-save { background: #22c55e !important; color: white !important; border: none !important; }
-        
-        /* Inputs e Tabelas */
-        .table-input { 
-            background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; 
-            color: #f8fafc; padding: 8px; width: 100%; border-radius: 6px;
-        }
-        .full-width-btn { width: 100%; padding: 10px; border-radius: 8px; cursor: pointer; border: none; font-weight: bold; margin-top: 10px; }
-        
-        .history-list { list-style: none; padding: 0; }
-        .history-item { 
-            background: rgba(255,255,255,0.03); padding: 10px; margin-bottom: 8px; 
-            border-radius: 6px; border-left: 3px solid #38bdf8; font-size: 0.9em; 
-        }
-        .history-item small { display: block; color: #94a3b8; margin-top: 4px; font-size: 0.8em; }
-
-        .hidden { display: none !important; }
-    </style>
 </head>
 <body>
     <div class="modern-dashboard">
@@ -89,30 +44,30 @@
                 </div>
             </div>
 
-            <div class="menu-section" style="margin-bottom: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                <label style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase;">Administração</label>
+            <div class="menu-section">
+                <label style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:8px; display:block;">Administração</label>
                 
                 <button onclick="toggleServerPanel()" class="btn-menu-server">
                     <i class="fas fa-server"></i> SERVIDORES E IPs
                 </button>
 
                 <button onclick="toggleDevicePanel()" class="btn-menu-server">
-                    <i class="fas fa-print"></i> GERENCIAR EQUIPAMENTOS
+                    <i class="fas fa-print"></i> EQUIPAMENTOS
                 </button>
 
                 <button onclick="toggleTopologyPanel()" class="btn-menu-server">
-                    <i class="fas fa-bezier-curve"></i> TOPOLOGIA DE REDE
+                    <i class="fas fa-bezier-curve"></i> TOPOLOGIA
                 </button>
 
                 <button onclick="toggleHistoryPanel()" class="btn-menu-server">
-                    <i class="fas fa-history"></i> HISTÓRICO DE QUEDAS
+                    <i class="fas fa-history"></i> HISTÓRICO
                 </button>
                 
-                <div style="margin-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 15px;">
-                    <label style="font-size:10px; color:#facc15; font-weight:700;">EDITOR 3D</label>
+                <div style="margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 20px;">
+                    <label style="font-size:10px; color:#facc15; font-weight:700; margin-bottom:8px; display:block;">EDITOR 3D</label>
                     
-                    <button id="btn-edit-mode" onclick="toggleEditMode()" class="btn-menu-server" style="border: 1px solid #facc15; color: #facc15;">
-                        <i class="fas fa-tools"></i> ATIVAR EDIÇÃO
+                    <button id="btn-edit-mode" onclick="toggleEditMode()" class="btn-menu-server btn-edit-mode">
+                        <i class="fas fa-tools"></i> MODO EDIÇÃO
                     </button>
                     
                     <div id="edit-actions" class="edit-controls hidden">
@@ -120,14 +75,14 @@
                             <i class="fas fa-save"></i> SALVAR
                         </button>
                         <button onclick="cancelEditMode()" class="btn-menu-server btn-cancel">
-                            <i class="fas fa-times"></i> CANCELAR
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
             </div>
 
             <div id="sector-info" class="sector-details hidden">
-                <h3><i class="fas fa-info-circle"></i> Detalhes do Ponto</h3>
+                <h3><i class="fas fa-info-circle"></i> Detalhes</h3>
                 <p id="sector-name">...</p>
                 <small id="sector-ip" style="color:#2dd4bf">IP: ...</small>
                 <div style="margin-top:10px; font-size:11px;" id="sector-status-msg"></div>
@@ -135,9 +90,11 @@
 
             <div class="sidebar-footer">
                 <p>Sistema Integrado</p>
-                <small>v7.4 - Fixed Panels</small>
+                <small>v8.0 - Final</small>
             </div>
         </aside>
+
+        <button class="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
 
         <main class="viewport-area">
             <div class="top-nav">
@@ -163,7 +120,7 @@
         </div>
         <div class="editor-body">
             <ul id="history-list" class="history-list"></ul>
-            <button onclick="clearHistory()" class="full-width-btn" style="background: #334155; color: white;">Limpar Histórico</button>
+            <button onclick="clearHistory()" class="full-width-btn" style="background: #334155; color: white;">Limpar Tudo</button>
         </div>
     </aside>
 
@@ -176,7 +133,7 @@
             <table style="width:100%; color: #cbd5e1; border-collapse: collapse;">
                 <thead>
                     <tr style="text-align:left; border-bottom:1px solid #334155;">
-                        <th>Nome</th><th>IP</th><th>Setor</th><th>Ação</th>
+                        <th style="padding:10px;">Nome</th><th>IP</th><th>Setor</th><th>Ação</th>
                     </tr>
                 </thead>
                 <tbody id="device-table-body"></tbody>
@@ -200,10 +157,10 @@
             <button class="close-btn" onclick="toggleTopologyPanel()"><i class="fas fa-times"></i></button>
         </div>
         <div class="editor-body">
-            <div style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
-                <select id="link-from" class="table-input" style="margin-bottom:5px;"><option>Origem...</option></select>
-                <select id="link-to" class="table-input" style="margin-bottom:5px;"><option>Destino...</option></select>
-                <button onclick="addLink()" class="full-width-btn" style="background:#2dd4bf; color:#0f172a;">Conectar</button>
+            <div style="margin-bottom: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                <select id="link-from" class="table-input"><option>Origem...</option></select>
+                <select id="link-to" class="table-input"><option>Destino...</option></select>
+                <button onclick="addLink()" class="full-width-btn" style="background:#2dd4bf; color:#0f172a; margin-top:10px;">Conectar</button>
             </div>
             <ul id="links-list" class="history-list"></ul>
         </div>
@@ -221,5 +178,11 @@
     <script src="js/topology_manager.js"></script> 
     
     <script src="js/main.js"></script>
+    
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+        }
+    </script>
 </body>
 </html>
